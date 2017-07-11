@@ -21,11 +21,11 @@ var newLine = "\r\n";
 // var page = "http://www.bostonplans.org/projects/development-projects?projectstatus=under+review&sortby=name&sortdirection=ASC&type=dev&viewall=1"
 
 // Board Approved
-var page = "http://www.bostonplans.org/projects/development-projects?projectstatus=board+approved&sortby=name&sortdirection=ASC&type=dev&viewall=1"
+//var page = "http://www.bostonplans.org/projects/development-projects?projectstatus=board+approved&sortby=name&sortdirection=ASC&type=dev&viewall=1"
 
 //Under Construction
 
-//var page = "http://www.bostonplans.org/projects/development-projects?projectstatus=under+construction&sortby=name&sortdirection=ASC&type=dev&viewall=1"
+var page = "http://www.bostonplans.org/projects/development-projects?projectstatus=under+construction&sortby=name&sortdirection=ASC&type=dev&viewall=1"
 
 request(page, gotPage);
 
@@ -76,7 +76,6 @@ function projectPage(err, res, html) {
     /*if (dataFields.indexOf(dataList[i].children[0].children[0].data) < 0) {
       dataFields.push(dataList[i].children[0].children[0].data);
     }*/
-    var csvObj = {};
     switch(webFieldName) {
       case "Address:":
         csvObj["Address(es)"] = webFieldData;
@@ -89,16 +88,18 @@ function projectPage(err, res, html) {
         break;
     }
       //console.log(res.request.uri.href);
-      csvObj["URL:"] = res.request.uri.href; 
-      csvData.push(csvObj);
+      
   } 
-  
+  csvObj["URL:"] = res.request.uri.href; 
+  csvData.push(csvObj);
 
   // console.log(dataObj);
 
   if (dataObj["Neighborhood:"] != undefined){
     var csvFileName = dataObj["Neighborhood:"].replace(/\s+/g, '-') + "-Projects.csv";
+    console.log(csvData);
     var csvContent = json2csv({data: csvData, fields: dataFields}) + newLine;
+    console.log(csvData);
     var downloadFolder = "./" + dataObj["Neighborhood:"].replace(/\s+/g, '-');
     mkdirIfReq(downloadFolder);
   }
@@ -109,7 +110,7 @@ function projectPage(err, res, html) {
       console.log('Appending ' + dataObj["Address:"]);
       fs.appendFile(csvFullPath, csvContent, function (err) {
         if (err) console.log(err);
-        console.log('Successfully added ' + dataObj["Address:"]);
+        // console.log('Successfully added ' + dataObj["Address:"]);
       });
     }
     else {
@@ -118,7 +119,7 @@ function projectPage(err, res, html) {
       newFileContent = writeFields + csvContent;
       fs.writeFile(csvFullPath, newFileContent, function (err, stat) {
         if (err) console.log(err);
-        console.log('Created ' + csvFileName);
+        // console.log('Created ' + csvFileName);
       });
     }
   }); 
