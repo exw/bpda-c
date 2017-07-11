@@ -15,30 +15,18 @@ var spawn = require('child_process').spawn;
 var json2csv = require('json2csv');
 var newLine = "\r\n";
 
-
-var pages = {};
-
-// pages.push("https://bostonplans.org/projects/development-projects";)
-pages["under-review"] = "http://www.bostonplans.org/projects/development-projects?neighborhoodid=19&projectstatus=under+review&sortby=name&sortdirection=ASC&type=dev&viewall=1"
+// var page = "https://bostonplans.org/projects/development-projects";
+// var page = "http://www.bostonplans.org/projects/development-projects?neighborhoodid=19&projectstatus=under+review&sortby=name&sortdirection=ASC&type=dev"
 // Under Review
-pages["board-approved"] = "http://www.bostonplans.org/projects/development-projects?projectstatus=board+approved&sortby=name&sortdirection=ASC&type=dev&viewall=1"
+// var page = "http://www.bostonplans.org/projects/development-projects?projectstatus=under+review&sortby=name&sortdirection=ASC&type=dev&viewall=1"
+
+// Board Approved
+var page = "http://www.bostonplans.org/projects/development-projects?projectstatus=board+approved&sortby=name&sortdirection=ASC&type=dev&viewall=1"
 
 //Under Construction
 
-pages["under-construction"] = "http://www.bostonplans.org/projects/development-projects?projectstatus=under+construction&sortby=name&sortdirection=ASC&type=dev&viewall=1"
+//var page = "http://www.bostonplans.org/projects/development-projects?projectstatus=under+construction&sortby=name&sortdirection=ASC&type=dev&viewall=1"
 
-for(i=0;i<Object.getOwnPropertyNames(pages).length;i++){
-  if(Object.getOwnPropertyNames(pages)[i] != undefined){
-  mkdirIfReq(Object.getOwnPropertyNames(pages)[i]);
-  var chDir = "cd " + Object.getOwnPropertyNames(pages)[i];
-  console.log("Running " + chDir);
-  exec(chDir, function(err, stdout, stderr) {
-    runScript(pages[Object.getOwnPropertyNames(pages)[i]])
-  }
-  }
-}
-
-function runScript(page){
 request(page, gotPage);
 
 function gotPage(err, res, html) {
@@ -74,15 +62,15 @@ function projectPage(err, res, html) {
   var dataFields = ["Property Description", "Address(es)", "Company Name(s)", "Proponents Name(s)","Address","Phone","Website Bio", "Notes", "Project URL"];
   
   //populate temporary object
-  var csvObj;
+  var csvObj = {};
   for (i=0;i<dataFields.length;i++){
     csvObj[dataFields[i]] = "";
   }
   var csvData = [];
   // populate objects, add to dataFields array if first time seen
   for (i=0;i<dataList.length;i++){
-    var webFieldName = dataList[i].children[0].children[0].data];
-    var webFieldData = dataList[i].children[1].children[0].data];
+    var webFieldName = dataList[i].children[0].children[0].data;
+    var webFieldData = dataList[i].children[1].children[0].data;
     //dataObj[dataList[i].children[0].children[0].data] = dataList[i].children[1].children[0].data;
     dataObj[webFieldName] = webFieldData;
     /*if (dataFields.indexOf(dataList[i].children[0].children[0].data) < 0) {
@@ -100,7 +88,7 @@ function projectPage(err, res, html) {
         csvObj["Property Description"] += "," + webFieldData;
         break;
     }
-      console.log(res.request.uri.href;
+      //console.log(res.request.uri.href);
       csvObj["URL:"] = res.request.uri.href; 
       csvData.push(csvObj);
   } 
@@ -108,10 +96,12 @@ function projectPage(err, res, html) {
 
   // console.log(dataObj);
 
-  var csvFileName = dataObj["Neighborhood:"].replace(/\s+/g, '-') + "-Projects.csv";
-  var csvContent = json2csv({data: csvData, fields: dataFields}) + newLine;
-  var downloadFolder = "./" + dataObj["Neighborhood:"].replace(/\s+/g, '-');
-  mkdirIfReq(downloadFolder);
+  if (dataObj["Neighborhood:"] != undefined){
+    var csvFileName = dataObj["Neighborhood:"].replace(/\s+/g, '-') + "-Projects.csv";
+    var csvContent = json2csv({data: csvData, fields: dataFields}) + newLine;
+    var downloadFolder = "./" + dataObj["Neighborhood:"].replace(/\s+/g, '-');
+    mkdirIfReq(downloadFolder);
+  }
   var csvFullPath = downloadFolder + "/" + csvFileName;
 
   fs.stat(csvFullPath, function(err, stat) {
@@ -156,10 +146,6 @@ function projectPage(err, res, html) {
       request(projectLinkURL, documentsPage);
       // Checking multiple pages
       // 
-      var pageLimit = 3;
-      for (i=2;i<=pageLimit;i++){
-        request(projectLinkURL + "&page=" + i, documentsPage);
-      }
     }
   }
 }
@@ -177,19 +163,21 @@ function documentsPage(err, res, html){
     var projectFileName = "";
   }
   var getNeighborhood = $(".linksWrapper span a");
-  var downloadFolder = "./" + getNeighborhood[0].children[0].data.replace(/\s+/g, '-');
-  var linkList = $(".downloadLink"); 
-  // console.log(linkList);
-  for (var i=0; i<linkList.length; i++){ 
-    var linkURL = linkList[i].attribs.href;
-    if (linkURL.includes("pnf") || linkURL.includes("spr")){ 
-      download_file_wget(linkURL,projectFileName,downloadFolder);
-      /* var filename = linkList[i] + ".pdf"; 
-      link.download = filename; 
-      link.dispatchEvent(new MouseEvent('click')); 
-      */
-      // console.log(linkList[i].attribs.href);
-    } 
+  if (getNeighborhood[0] != undefined) {
+    var downloadFolder = "./" + getNeighborhood[0].children[0].data.replace(/\s+/g, '-');
+    var linkList = $(".downloadLink"); 
+    // console.log(linkList);
+    for (var i=0; i<linkList.length; i++){ 
+      var linkURL = linkList[i].attribs.href;
+      if (linkURL.includes("pnf") || linkURL.includes("spr")){ 
+        download_file_wget(linkURL,projectFileName,downloadFolder);
+        /* var filename = linkList[i] + ".pdf"; 
+        link.download = filename; 
+        link.dispatchEvent(new MouseEvent('click')); 
+        */
+        // console.log(linkList[i].attribs.href);
+      } 
+    }
   }
 }
 
@@ -208,7 +196,7 @@ function download_file_wget(file_url,file_name,folder){
         else console.log(file_name + ' downloaded to ' + folder);
       });
     }
-  }
+  });
 }
 
 function mkdirIfReq(folder) {
@@ -220,5 +208,4 @@ function mkdirIfReq(folder) {
     }
     else return;
   }); 
-}
 }
