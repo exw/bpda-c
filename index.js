@@ -122,14 +122,14 @@ function projectPage(err, res, html) {
 
   fs.stat(csvFullPath, function(err, stat) {
     if (err == null) {
-      console.log('Appending ' + dataObj["Address:"] + " at " + res.request.uri.href);
+      // console.log('Appending ' + dataObj["Address:"] + " at " + res.request.uri.href);
       fs.appendFile(csvFullPath, csvContent, function (err) {
         if (err) console.log(err);
         // console.log('Successfully added ' + dataObj["Address:"]);
       });
     }
     else {
-      console.log('Creating ' + csvFileName);
+      //console.log('Creating ' + csvFileName);
       var writeHeader = "";
       var newFileContent = "";
       for (i=0;i<dataFields.length;i++){
@@ -204,21 +204,20 @@ function documentsPage(err, res, html){
   }
 }
 
-function download_file_wget(file_url,file_name,folder){
-  // mkdirIfReq(folder);
-  console.log("Before Cleaning: " + folder + "/" + file_name);
-  var cleanFileName = file_name.replace(/\s+/g, '-').replace(/[^A-Za-z0-9_-]/g, "") + ".pdf";
+function download_file_wget(file_url,raw_file_name,folder){
+  mkdirIfReq(folder);
+  var file_name = raw_file_name.replace(/\s+/g, '-').replace(/[^A-Za-z0-9_-]+/g, "").replace(/\r?\n|\r/g, "").replace(/\/\\/g, "") + ".pdf";
   var filePath = folder + "/" + file_name;
   fs.stat(filePath, function(err, stat) {
     if (err == null) {
-      console.log("Skipping " + file_name + " Download, File Exists");
+      // console.log("Skipping " + file_name + " Download, File Exists");
     }
     else {
-      console.log ("Downloading " + file_name + " at " + file_url);
-      var wget = 'wget -O ' + folder + "/" + file_name + ' ' + file_url;
+      // console.log ("Downloading " + file_name + " at " + file_url);
+      var wget = 'wget -O ' + folder + "/" + file_name + ' ' + '"' + file_url + '"';
       var child = exec(wget, function(err, stdout, stderr) {
         if (err) console.log(err);
-        else console.log(file_name + ' downloaded to ' + folder);
+        // else  console.log(file_name + ' downloaded to ' + folder);
       });
     }
   });
