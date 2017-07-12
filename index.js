@@ -20,7 +20,6 @@ pages["under-construction"] = "http://www.bostonplans.org/projects/development-p
 pages["board-approved"] = "http://www.bostonplans.org/projects/development-projects?projectstatus=board+approved&sortby=name&sortdirection=ASC&type=dev&viewall=1"
 pages["under-review"] = "http://www.bostonplans.org/projects/development-projects?projectstatus=under+review&sortby=name&sortdirection=ASC&type=dev&viewall=1"
 
-console.log(process.argv);
 var page = pages[process.argv[2]];
 
 // var page = "https://bostonplans.org/projects/development-projects";
@@ -91,7 +90,7 @@ function projectPage(err, res, html) {
         csvObj["Property Description"] = "\"" + webFieldData + "\"";
         break;
       case "Residential Units:":
-        csvObj["Property Description"].replace(/\"\s*$/, "") += " with " + webFieldData + " res units\"";
+        csvObj["Property Description"] = csvObj["Property Description"].replace(/\"\s*$/, "") + " with " + webFieldData + " res units\"";
         break;
       case "Uses:":
         csvObj["Notes"] = webFieldData;
@@ -123,7 +122,7 @@ function projectPage(err, res, html) {
 
   fs.stat(csvFullPath, function(err, stat) {
     if (err == null) {
-      console.log('Appending ' + dataObj["Address:"]);
+      console.log('Appending ' + dataObj["Address:"] + " at " + res.request.uri.href);
       fs.appendFile(csvFullPath, csvContent, function (err) {
         if (err) console.log(err);
         // console.log('Successfully added ' + dataObj["Address:"]);
@@ -147,16 +146,14 @@ function projectPage(err, res, html) {
   // get documents on this page, if none visit documentsPage link
   var linkList = $(".documentLink");
   for (i=0;i<linkList.length;i++) {
-    // console.log(linkList[i]);
-
     // download pdf
     var downloadLinkText = linkList[i].children[0].data;
-    var downloadLink,downloadFile,downloadFolder;
+    var downloadLink,downloadFile;
     if (downloadLinkText.includes("PNF") || downloadLinkText.includes("SPR")){ 
       downloadLink = "https://bostonplans.org" + linkList[i].attribs.href;
       downloadFile = downloadLinkText.replace(/\s+/g, '-') + ".pdf";
       // console.log(downloadFolder);
-      // download_file_wget(downloadLink,downloadFile,downloadFolder);
+      download_file_wget(downloadLink,downloadFile,downloadFolder);
       output += "\""; 
       output += downloadLink.href; 
       output +="\","; 
@@ -179,10 +176,12 @@ function documentsPage(err, res, html){
   var $ = cheerio.load(html);
   var getProjectName = $(".documentTableWrapper table tbody tr td p span a");
   if (getProjectName[0] != undefined){
-    var projectFileName = getProjectName[0].children[0].data.replace(/\s+/g, '-') + ".pdf";
+    var projectFileName = getProjectName[0].children[0].data.replace(/\s+/g, '-').replace(/[^A-Za-z0-9_-]/g, "") + ".pdf";
+    var skip = false;
   }
   else {
     var projectFileName = "";
+    var skip = true;
   }
   var getNeighborhood = $(".linksWrapper span a");
   if (getNeighborhood[0] != undefined) {
@@ -192,7 +191,9 @@ function documentsPage(err, res, html){
     for (var i=0; i<linkList.length; i++){ 
       var linkURL = linkList[i].attribs.href;
       if (linkURL.includes("pnf") || linkURL.includes("spr")){ 
-        download_file_wget(linkURL,projectFileName,downloadFolder);
+        if (!skip) {
+          download_file_wget(linkURL,projectFileName,downloadFolder);
+        }
         /* var filename = linkList[i] + ".pdf"; 
         link.download = filename; 
         link.dispatchEvent(new MouseEvent('click')); 
@@ -205,6 +206,8 @@ function documentsPage(err, res, html){
 
 function download_file_wget(file_url,file_name,folder){
   // mkdirIfReq(folder);
+  console.log("Before Cleaning: " + folder + "/" + file_name);
+  var cleanFileName = file_name.replace(/\s+/g, '-').replace(/[^A-Za-z0-9_-]/g, "") + ".pdf";
   var filePath = folder + "/" + file_name;
   fs.stat(filePath, function(err, stat) {
     if (err == null) {
