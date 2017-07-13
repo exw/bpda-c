@@ -116,20 +116,21 @@ function projectPage(err, res, html) {
 
 
     var downloadFolder = "./" + dataObj["Neighborhood:"].replace(/\s+/g, '-');
-    mkdirIfReq(downloadFolder);
   }
   var csvFullPath = downloadFolder + "/" + csvFileName;
+  mkdirIfReq(downloadFolder);
+  
 
   fs.stat(csvFullPath, function(err, stat) {
     if (err == null) {
-      // console.log('Appending ' + dataObj["Address:"] + " at " + res.request.uri.href);
+      console.log('Appending ' + dataObj["Address:"] + " at " + res.request.uri.href);
       fs.appendFile(csvFullPath, csvContent, function (err) {
         if (err) console.log(err);
         // console.log('Successfully added ' + dataObj["Address:"]);
       });
     }
     else {
-      //console.log('Creating ' + csvFileName);
+      console.log('Creating ' + csvFileName);
       var writeHeader = "";
       var newFileContent = "";
       for (i=0;i<dataFields.length;i++){
@@ -151,9 +152,11 @@ function projectPage(err, res, html) {
     var downloadLink,downloadFile;
     if (downloadLinkText.includes("PNF") || downloadLinkText.includes("SPR")){ 
       downloadLink = "https://bostonplans.org" + linkList[i].attribs.href;
-      downloadFile = downloadLinkText.replace(/\s+/g, '-') + ".pdf";
+      downloadFile = downloadLinkText //.replace(/\s+/g, '-');
       // console.log(downloadFolder);
-      download_file_wget(downloadLink,downloadFile,downloadFolder);
+      // download_file_wget(downloadLink,downloadFile,downloadFolder);
+      // download_file_fs(downloadLink,downloadFile,downloadFolder);
+      download_file_request(downloadLink,downloadFile,downloadFolder);
       output += "\""; 
       output += downloadLink.href; 
       output +="\","; 
@@ -176,7 +179,7 @@ function documentsPage(err, res, html){
   var $ = cheerio.load(html);
   var getProjectName = $(".documentTableWrapper table tbody tr td p span a");
   if (getProjectName[0] != undefined){
-    var projectFileName = getProjectName[0].children[0].data.replace(/\s+/g, '-').replace(/[^A-Za-z0-9_-]/g, "") + ".pdf";
+    var projectFileName = getProjectName[0].children[0].data //.replace(/\s+/g, '-').replace(/[^A-Za-z0-9_-]/g, "");
     var skip = false;
   }
   else {
@@ -192,7 +195,9 @@ function documentsPage(err, res, html){
       var linkURL = linkList[i].attribs.href;
       if (linkURL.includes("pnf") || linkURL.includes("spr")){ 
         if (!skip) {
-          download_file_wget(linkURL,projectFileName,downloadFolder);
+          // download_file_wget(linkURL,projectFileName,downloadFolder);
+          // download_file_fs(linkURL,projectFileName,downloadFolder);
+          download_file_request(linkURL, projectFileName, downloadFolder);
         }
         /* var filename = linkList[i] + ".pdf"; 
         link.download = filename; 
@@ -222,6 +227,39 @@ function download_file_wget(file_url,raw_file_name,folder){
     }
   });
 }
+
+function download_file_fs(uri, filename, folder){
+  mkdirIfReq(folder);
+  var filepath = folder + "/" + filename;
+  var protocol = url.parse(uri).protocol.slice(0, -1);
+  var deferred = Q.defer();
+  var onError = function (e) {
+    fs.unlink(filename);
+    deferred.reject(e);
+  }
+  require(protocol).get(uri, function(response) {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      var fileStream = fs.createWriteStream(filepath);
+        fileStream.on('error', onError);
+        fileStream.on('close', deferred.resolve);
+        response.pipe(fileStream);
+    } else if (response.headers.location) {
+        deferred.resolve(download(response.headers.location, filename));
+    } else {
+        deferred.reject(new Error(response.statusCode + ' ' + response.statusMessage));
+    }
+  }).on('error', onError);
+  return deferred.promise;
+};
+
+function download_file_request(uri, raw_file_name, folder){
+  mkdirIfReq(folder);
+  var file_name = raw_file_name.replace(/\s+/g, '-').replace(/[^A-Za-z0-9_-]+/g, "").replace(/\r?\n|\r/g, "").replace(/\/\\/g, "") + ".pdf";
+  var file_path = folder + "/" + file_name;
+  request('uri').pipe(fs.createWriteStream(file_path));
+}
+ 
+
 
 function mkdirIfReq(folder) {
   var mkdir = 'mkdir -p ' + folder;
