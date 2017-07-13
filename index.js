@@ -2,7 +2,9 @@
 
 // parsing modules
 var request = require('request');
+var progress = require('request-progress');
 var cheerio = require('cheerio');
+var sleep = require('system-sleep');
 
 // wget download modules
 var fs = require('fs');
@@ -51,6 +53,9 @@ function listPage(html) {
     var projectPageURI = devprojectList[i].attribs.href; 
     var projectPageURL = "https://bostonplans.org" + projectPageURI;
 //    console.log(projectPageURL);
+
+    sleep(1000);
+    // console.log("Slept 1 sec " + projectPageURI);
     request(projectPageURL, projectPage);
   }
 }
@@ -66,14 +71,14 @@ function projectPage(err, res, html) {
   // load csv information
   var dataList = $(".projectInfo li");
   var dataObj = {};
-  var dataFields = ["Property Description", "Address(es)", "Company Name(s)", "Proponents Name(s)","Address","Phone","Website Bio","Notes", "Project URL"];
+  var dataFields = ["Property Description", "Address(es)", "Company Name(s)", "Proponents Name(s)","Address","Phone","Website Bio","Notes", "Project URL", "Overview"];
   
   //populate temporary object
   var csvObj = {};
   for (i=0;i<dataFields.length;i++){
     csvObj[dataFields[i]] = "";
   }
-  // populate objects, add to dataFields array if first time seen
+  // get data from scraped information
   for (i=0;i<dataList.length;i++){
     var webFieldName = dataList[i].children[0].children[0].data;
     var webFieldData = dataList[i].children[1].children[0].data;
@@ -101,6 +106,8 @@ function projectPage(err, res, html) {
       //console.log(res.request.uri.href);
   } 
   csvObj["Project URL"] = res.request.uri.href; 
+  csvObj["Overview"] = $(".columnOne p")[0].children[0].data;
+  console.log($(".columnOne p")[0].children[0].data);
 
   // console.log(dataObj);
 
@@ -117,20 +124,21 @@ function projectPage(err, res, html) {
 
     var downloadFolder = "./" + dataObj["Neighborhood:"].replace(/\s+/g, '-');
   }
-  var csvFullPath = downloadFolder + "/" + csvFileName;
+  //var csvFullPath = downloadFolder + "/" + csvFileName;
+  var csvFullPath = "./" + csvFileName;
   mkdirIfReq(downloadFolder);
   
 
   fs.stat(csvFullPath, function(err, stat) {
     if (err == null) {
-      console.log('Appending ' + dataObj["Address:"] + " at " + res.request.uri.href);
+      //console.log('Appending ' + dataObj["Address:"] + " at " + res.request.uri.href);
       fs.appendFile(csvFullPath, csvContent, function (err) {
         if (err) console.log(err);
         // console.log('Successfully added ' + dataObj["Address:"]);
       });
     }
     else {
-      console.log('Creating ' + csvFileName);
+      //console.log('Creating ' + csvFileName);
       var writeHeader = "";
       var newFileContent = "";
       for (i=0;i<dataFields.length;i++){
@@ -252,14 +260,30 @@ function download_file_fs(uri, filename, folder){
   return deferred.promise;
 };
 
-function download_file_request(uri, raw_file_name, folder){
+function download_file_request(url, raw_file_name, folder){
   mkdirIfReq(folder);
   var file_name = raw_file_name.replace(/\s+/g, '-').replace(/[^A-Za-z0-9_-]+/g, "").replace(/\r?\n|\r/g, "").replace(/\/\\/g, "") + ".pdf";
   var file_path = folder + "/" + file_name;
-  request('uri').pipe(fs.createWriteStream(file_path));
+
+  request.head(url, function(err, res, body){
+    //console.log(file_name);
+    if (res.headers['content-type'] === 'text/html'){
+      console.log('failed, check ' + file_path);
+      console.log('for url: ' + url);
+      console.log('content-type:', res.headers['content-type']);
+      //console.log('content-length:', res.headers['content-length']);
+    }
+    else{
+      request(url).pipe(fs.createWriteStream(file_path));
+    }
+  });
 }
  
-
+function sleep(ms){
+  return new Promise(resolve=>{
+    setTimeout(resolve,ms)
+  })
+}
 
 function mkdirIfReq(folder) {
   var mkdir = 'mkdir -p ' + folder;
