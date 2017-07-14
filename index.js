@@ -47,12 +47,28 @@ function gotPage(err, res, html) {
 function listPage(html) {
   var $ = cheerio.load(html);
   var devprojectList = $(".devprojectTable a"); 
-  var dataArray = [];
+
+  var dataFields = ["Property Description", "Address(es)", "Company Name(s)", "Proponents Name(s)","Address","Phone","Notes","Uses","Neighborhood","Project URL","Status","Overview"];
+  
   var i;
+  /*** Create master CSV file for folder ***/
+    //console.log('Creating ' + csvFileName);
+    var writeHeader = "";
+    var newFileContent = "";
+    for (i=0;i<dataFields.length;i++){
+      writeHeader += dataFields[i] + ",";
+      newFileContent = writeHeader.replace(/,\s*$/, "") + newLine;
+      fs.writeFile('./temp.csv', newFileContent, function (err, stat) {
+        if (err) console.log(err);
+        console.log('Created master temp file');
+        // 
+      });
+    }
+
   for (i=0;i<devprojectList.length;i++) { 
     var projectPageURI = devprojectList[i].attribs.href; 
     var projectPageURL = "https://bostonplans.org" + projectPageURI;
-//    console.log(projectPageURL);
+    //console.log(projectPageURL);
 
     sleep(1000);
     // console.log("Slept 1 sec " + projectPageURI);
@@ -71,7 +87,9 @@ function projectPage(err, res, html) {
   // load csv information
   var dataList = $(".projectInfo li");
   var dataObj = {};
-  var dataFields = ["Property Description", "Address(es)", "Company Name(s)", "Proponents Name(s)","Address","Phone","Website Bio","Notes", "Project URL", "Overview"];
+  var dataFields = ["Property Description", "Address(es)", "Company Name(s)", "Proponents Name(s)","Address","Phone","Notes","Uses","Neighborhood","Project URL","Status","Overview"];
+  // note dataFields duplicated in listPage function, ~line 51
+  
   
   //populate temporary object
   var csvObj = {};
@@ -98,23 +116,24 @@ function projectPage(err, res, html) {
         csvObj["Property Description"] = csvObj["Property Description"].replace(/\"\s*$/, "") + " with " + webFieldData + " res units\"";
         break;
       case "Uses:":
-        csvObj["Notes"] = webFieldData;
+        csvObj["Uses"] = webFieldData;
         break;
+      case "Neighborhood:":
+        csvObj["Neighborhood"] = webFieldData;
       default:
         break;
     }
       //console.log(res.request.uri.href);
   } 
   csvObj["Project URL"] = res.request.uri.href; 
-  csvObj["Overview"] = $(".columnOne p")[0].children[0].data;
-  console.log($(".columnOne p")[0].children[0].data);
+  csvObj["Overview"] = "\"" + $(".columnOne p")[0].children[0].data.replace(/"/g, "'") + "\"";
+  // console.log($(".columnOne p")[0].children[0].data);
 
   // console.log(dataObj);
 
   if (dataObj["Neighborhood:"] != undefined){
     var csvFileName = dataObj["Neighborhood:"].replace(/\s+/g, '-') + "-Projects.csv";
     //console.log(csvData);
-    // var csvContent = json2csv({data: csvData, fields: dataFields}) + newLine;
     var csvContent = "";
     for (i=0;i<dataFields.length;i++){
       csvContent += csvObj[dataFields[i]] + ",";
@@ -124,9 +143,13 @@ function projectPage(err, res, html) {
 
     var downloadFolder = "./" + dataObj["Neighborhood:"].replace(/\s+/g, '-');
   }
+
+  /*** Declare CSV Name ***/
   //var csvFullPath = downloadFolder + "/" + csvFileName;
-  var csvFullPath = "./" + csvFileName;
+  //var csvFullPath = "./" + csvFileName;
+  var csvFullPath = "./temp.csv"
   mkdirIfReq(downloadFolder);
+  
   
 
   fs.stat(csvFullPath, function(err, stat) {
@@ -137,7 +160,8 @@ function projectPage(err, res, html) {
         // console.log('Successfully added ' + dataObj["Address:"]);
       });
     }
-    else {
+    /*** disabling to create master csv files only 
+      else {
       //console.log('Creating ' + csvFileName);
       var writeHeader = "";
       var newFileContent = "";
@@ -150,7 +174,7 @@ function projectPage(err, res, html) {
           // 
         });
       }
-    }
+    } */
   });
   // get documents on this page, if none visit documentsPage link
   var linkList = $(".documentLink");
