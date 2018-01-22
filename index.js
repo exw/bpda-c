@@ -23,6 +23,7 @@ pages["board-approved"] = "http://www.bostonplans.org/projects/development-proje
 pages["under-review"] = "http://www.bostonplans.org/projects/development-projects?projectstatus=under+review&sortby=name&sortdirection=ASC&type=dev&viewall=1"
 
 var page = pages[process.argv[2]];
+console.log("Setting start page at " + page);
 
 // var page = "https://bostonplans.org/projects/development-projects";
 // var page = "http://www.bostonplans.org/projects/development-projects?neighborhoodid=19&projectstatus=under+review&sortby=name&sortdirection=ASC&type=dev"
@@ -56,19 +57,19 @@ function listPage(html) {
     var writeHeader = "";
     var newFileContent = "";
     for (i=0;i<dataFields.length;i++){
+      // console.log(i);
       writeHeader += dataFields[i] + ",";
       newFileContent = writeHeader.replace(/,\s*$/, "") + newLine;
-      fs.writeFile('./temp.csv', newFileContent, function (err, stat) {
-        if (err) console.log(err);
-        console.log('Created master temp file');
-        // 
-      });
-    }
+      }
+    fs.writeFile('./temp.csv', newFileContent, function (err, stat) {
+      if (err) console.log(err);
+      console.log('Writing ' + newFileContent);
+    });
 
   for (i=0;i<devprojectList.length;i++) { 
     var projectPageURI = devprojectList[i].attribs.href; 
-    var projectPageURL = "https://bostonplans.org" + projectPageURI;
-    //console.log(projectPageURL);
+    var projectPageURL = "http://bostonplans.org" + projectPageURI;
+    console.log(projectPageURL);
 
     sleep(1000);
     // console.log("Slept 1 sec " + projectPageURI);
@@ -78,38 +79,63 @@ function listPage(html) {
 
 function projectPage(err, res, html) {
   if (err) console.log(err);
-  // console.log("Project Page Status Code:", res.statusCode);
+  console.log("Project Page Status Code:", res.statusCode);
 
   var $ = cheerio.load(html);
   var output = "";
   var i;
   
   // load csv information
-  var dataList = $(".projectInfo li");
+
   var dataObj = {};
   var dataFields = ["Property Description", "Address(es)", "Company Name(s)", "Proponents Name(s)","Address","Phone","Notes","Uses","Neighborhood","Project URL","Status","Overview"];
   // note dataFields duplicated in listPage function, ~line 51
-  
-  
+
+  var dataList;
+  var pageType;
+  if ($(".projectInfo").length) {
+    pageType = "old";
+    console.log("Old page type");
+    dataList = $(".projectInfo li");
+  }
+  else if ($(".projATimelineDetails")) {
+    pageType = "new";
+    console.log("New page type");
+    dataList = $(".bpdaPrjHeader");
+  }
+  //console.log(dataList);
   //populate temporary object
   var csvObj = {};
   for (i=0;i<dataFields.length;i++){
     csvObj[dataFields[i]] = "";
   }
   // get data from scraped information
+  if (pageType = "old"){
   for (i=0;i<dataList.length;i++){
-    var webFieldName = dataList[i].children[0].children[0].data;
-    var webFieldData = dataList[i].children[1].children[0].data;
+    webFieldName = dataList[i].children[0].children[0].data;
+    webFieldData = dataList[i].children[1].children[0].data;
+    console.log("Entering " + webFieldName + " " + webFieldData);
     //dataObj[dataList[i].children[0].children[0].data] = dataList[i].children[1].children[0].data;
     dataObj[webFieldName] = webFieldData;
     /*if (dataFields.indexOf(dataList[i].children[0].children[0].data) < 0) {
       dataFields.push(dataList[i].children[0].children[0].data);
     }*/
+  }}
+  else if (pageType = "new"){
+  for (i=0;i<dataList.length;i++){
+    webFieldName = dataList[i].children[0].data;
+    webFieldData = $(".bpdaPrjDetails")[i].children[0].data;
+    console.log("Entering " + webFieldName + " " + webFieldData);
+    dataObj[webFieldName] = webFieldData;
+
+    
+  }
     switch(webFieldName) {
       case "Address:":
         csvObj["Address(es)"] = "\"" + webFieldData + "\"";
         break;
       case "Building Size:":
+      case "Building Size":
         csvObj["Property Description"] = "\"" + webFieldData + "\"";
         break;
       case "Residential Units:":
@@ -119,7 +145,10 @@ function projectPage(err, res, html) {
         csvObj["Uses"] = webFieldData;
         break;
       case "Neighborhood:":
+      case "Neighborhood":
         csvObj["Neighborhood"] = webFieldData;
+      case "Project Manager":
+        csvObj["Project Manager"] = webFieldData;
       default:
         break;
     }
@@ -154,7 +183,7 @@ function projectPage(err, res, html) {
 
   fs.stat(csvFullPath, function(err, stat) {
     if (err == null) {
-      //console.log('Appending ' + dataObj["Address:"] + " at " + res.request.uri.href);
+      console.log('Appending ' + dataObj["Address:"] + " at " + res.request.uri.href);
       fs.appendFile(csvFullPath, csvContent, function (err) {
         if (err) console.log(err);
         // console.log('Successfully added ' + dataObj["Address:"]);
@@ -183,7 +212,7 @@ function projectPage(err, res, html) {
     var downloadLinkText = linkList[i].children[0].data;
     var downloadLink,downloadFile;
     if (downloadLinkText.includes("PNF") || downloadLinkText.includes("SPR")){ 
-      downloadLink = "https://bostonplans.org" + linkList[i].attribs.href;
+      downloadLink = "http://bostonplans.org" + linkList[i].attribs.href;
       downloadFile = downloadLinkText //.replace(/\s+/g, '-');
       // console.log(downloadFolder);
       // download_file_wget(downloadLink,downloadFile,downloadFolder);
@@ -195,7 +224,7 @@ function projectPage(err, res, html) {
       //console.log(output);
     } 
     else {
-      var projectLinkURL = "https://bostonplans.org" + $(".projectLinks a")[0].attribs.href; 
+      var projectLinkURL = "http://bostonplans.org" + $(".projectLinks a")[0].attribs.href; 
       // console.log(projectLinkURL);
       request(projectLinkURL, documentsPage);
       // Checking multiple pages

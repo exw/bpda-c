@@ -1,4 +1,8 @@
 #!/bin/bash
+RUNDATE=`date +"%Y-%m-%d"`
+cp ./index.js $RUNDATE
+mkdir -p $RUNDATE
+cd $RUNDATE
 mkdir -p under-construction
 mkdir -p under-review
 mkdir -p board-approved
