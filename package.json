@@ -1,0 +1,27 @@
+{
+  "name": "bpda-c",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/exw/bpda-c.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/exw/bpda-c/issues"
+  },
+  "homepage": "https://github.com/exw/bpda-c#readme",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.2",
+    "https": "^1.0.0",
+    "json2csv": "^3.11.5",
+    "request": "^2.83.0",
+    "request-progress": "^3.0.0",
+    "system-sleep": "^1.3.6"
+  }
+}
